@@ -6,6 +6,12 @@ Before using this library, you need to install the `mcrcon` package using pip:
 ```bash
 pip install mcrcon
 ```  
+And Install the mc mod `BettterRcon` in your server.  
+The mod is written by me, and it only avaiable for Fabric 1.20.1.  
+But it is simple and you may write it yourself.  
+*If you don't install the mod, it only causes issues on functions with the need of responses such as `list_players()` and `banner().list()` .*  
+*So it's **OKAY to not install the mod**, but you won't be able to use these functions.*  
+
 Then you can start using the library by importing it in your python script:  
 ```python
 from main import *
@@ -20,7 +26,7 @@ with MCRcon('your.server.ip', 'your.rcon.password') as mcr:
 
     player_list = list_players()
     print(player_list)
-    
+
     # etc...
     tellraw(message=JsonText("Hello TellRaw!", color="gold"))
     print(playsound("minecraft:entity.player.levelup", target="Falsw"))
