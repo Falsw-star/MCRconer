@@ -2,8 +2,12 @@ from main import *
 import time
 
 with Rcon("127.0.0.1", "FalswIsNotCute", 25575) as rcon:
-    tlr = titler(wait=True)
-    tlr.title(JsonText("Hello Minecraft", color="gold", bold=True)).subtitle("Welcome to MCRconer!").run()
-    playsound("entity.player.levelup")
-    tellraw(message=JsonText("Little_1 is so cute!", italic=True, color="red"))
-    banner().ban("Khouserless")
+    say("Hello Minecraft")
+    tellraw(message=JsonText("Hello TellRaw!", color="gold"))
+    print(playsound("minecraft:entity.player.levelup", target="Falsw"))
+    vtlr = titler()
+    vtlr.title(JsonText("Welcome to", color="green", bold=True) + " " + JsonText("Minecraft", color="gold", bold=True))
+    vtlr.subtitle(JsonText("A Python library for RCON", color="aqua"))
+    vtlr.run()
+    vtlr.actionbar(JsonText("Little is cute!", color="red", bold=True, italic=True))
+    vtlr.run()

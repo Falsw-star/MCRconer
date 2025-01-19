@@ -2,7 +2,7 @@ import mcrcon # type: ignore
 import json, time
 import re
 
-from typing import Callable
+from typing import Callable, Union
 
 __version__ = "0.1.0"
 
@@ -22,7 +22,7 @@ class Rcon(mcrcon.MCRcon):
 
 class JsonText(object):
     def __init__(self, text: str = "",
-            color: str = "white",
+            color: str = "",
             font: str = "",
             bold: bool = False,
             italic: bool = False,
@@ -37,19 +37,31 @@ class JsonText(object):
         self.strikethrough = strikethrough
         self.obfuscated = obfuscated
         self.text = text
+        self.extras: list[JsonText] = []
     
     def __str__(self) -> str:
         content: dict = {
             "text": self.text,
-            "color": self.color
         }
+        if self.color: content["color"] = self.color
         if self.font: content["font"] = self.font
         if self.bold: content["bold"] = self.bold
         if self.italic: content["italic"] = self.italic
         if self.underlined: content["underlined"] = self.underlined
         if self.strikethrough: content["strikethrough"] = self.strikethrough
         if self.obfuscated: content["obfuscated"] = self.obfuscated
-        return json.dumps(content, ensure_ascii=False)
+        result = json.dumps(content, ensure_ascii=False)
+        if self.extras:
+            result += ", " + ", ".join([str(extra) for extra in self.extras])
+            result = f"[{result}]"
+        return result
+
+    def __add__(self, other: Union[str, 'JsonText']) -> 'JsonText':
+        if isinstance(other, str):
+            other = JsonText(other)
+        if isinstance(other, JsonText):
+            self.extras.append(other)
+            return self
 
 def _call(command: str) -> str:
     if not CLIENT: raise ValueError("Please connect to server first.")
@@ -80,21 +92,28 @@ class tellraw(object):
         return _call(command)
 
 class titler(object):
-    def __init__(self, target: str = "@a", fade_in: float = 0.5, stay: float = 3.5, fade_out: float = 1.0, wait: bool = False, save_queue: bool = False) -> None:
+    def __init__(self, target: str = "@a", fade_in: float = 0.5, stay: float = 3.5, fade_out: float = 1.0, wait: bool = True, save_queue: bool = False) -> None:
         """Method __init__ will not send meassage to server.
         Fades in, stays, and fades out are in seconds."""
         self.target = target
         self.fade_in: int = round(fade_in * 20)
         self.stay: int = round(stay * 20)
         self.fade_out: int = round(fade_out * 20)
-        self.wait = wait
-
+        self.wait_f = lambda: time.sleep(fade_in + stay + fade_out) if wait else None
         self.queue: list[Callable[[], str]] = []
         self.save_queue = save_queue
     
-    def _wait(self) -> None:
-        if self.wait: time.sleep(self.fade_in + self.stay + self.fade_out)
-    
+    def times(self,
+              fade_in: float | None | None = None,
+              stay: float | None = None,
+              fade_out: float | None = None) -> 'titler':
+        
+        if fade_in: self.fade_in = round(fade_in * 20)
+        if stay: self.stay = round(stay * 20)
+        if fade_out: self.fade_out = round(fade_out * 20)
+        command = f"title {self.target} times {self.fade_in} {self.stay} {self.fade_out}"
+        self._add(command)
+        return self
     def reset(self, target: str = "") -> str:
         if not target: target = self.target
         command = f"title {target} reset"
@@ -107,43 +126,44 @@ class titler(object):
     def _add(self, command: str) -> None:
         self.queue.append(lambda: _call(command))
     
-    def title(self, content: JsonText | str, target: str = "") -> 'titler':
+    def title(self, content: JsonText, target: str = "") -> 'titler':
         if not target: target = self.target
-        command = f"title {target} times {self.fade_in} {self.stay} {self.fade_out} title {content.__str__()}"
+        command = f"title {target} title {content.__str__()}"
         self._add(command)
         return self
     
-    def subtitle(self, content: JsonText | str, target: str = "") -> 'titler':
+    def subtitle(self, content: JsonText, target: str = "") -> 'titler':
         if not target: target = self.target
-        command = f"title {target} times {self.fade_in} {self.stay} {self.fade_out} subtitle {content.__str__()}"
+        command = f"title {target} subtitle {content.__str__()}"
         self._add(command)
         return self
     
-    def actionbar(self, content: JsonText | str, target: str = "") -> 'titler':
+    def actionbar(self, content: JsonText, target: str = "") -> 'titler':
         if not target: target = self.target
-        command = f"title {target} times {self.fade_in} {self.stay} {self.fade_out} actionbar {content.__str__()}"
+        command = f"title {target} actionbar {content.__str__()}"
         self._add(command)
         return self
     
-    def run(self, wait: bool | None = None) -> str:
+    def run(self) -> str:
         response = ""
         for command in self.queue:
             response += command()
+        self.wait_f()
+        response += self.reset()
         if not self.save_queue: self.queue = []
-        if wait is True or self.wait is True: self._wait()
         return response
         
-
 def playsound(sound: str,
-              source: str = "master",
+              source: str = "ambient",
               target: str = "@a",
               pos: tuple[float, float, float] = (0, 0, 0),
               volume: float = 1.0,
-              pitch: float = 1.0) -> str:
+              pitch: float = 1.0,
+              min_volume: float = 1.0,) -> str:
     """Method playsound will play sound to server.
     Check https://minecraft.fandom.com/zh/wiki/Sounds.json for more sound names."""
     x, y, z = pos
-    command = f"playsound {sound} {source} {target} {x} {y} {z} {volume} {pitch}"
+    command = f"playsound {sound} {source} {target} {x} {y} {z} {volume} {pitch} {min_volume}"
     return _call(command)
 
 class banner(object):
