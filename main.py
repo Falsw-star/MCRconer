@@ -1,6 +1,8 @@
 import mcrcon # type: ignore
-import json
+import json, time
 import re
+
+from typing import Callable
 
 __version__ = "0.1.0"
 
@@ -65,7 +67,7 @@ def list_players() -> list:
     return players
 
 class tellraw(object):
-    def __init__(self, message: JsonText | None = None, target: str = "@a") -> None:
+    def __init__(self, *, message: JsonText | None = None, target: str = "@a") -> None:
         """If message is not empty, method __init__ will send it.
         Use method send to send message to server within returned server's response."""
         self.message = message
@@ -77,27 +79,60 @@ class tellraw(object):
         command = f"tellraw {target} {message.__str__()}"
         return _call(command)
 
-class title(object):
-    def __init__(self, target: str = "@a", fade_in: float = 0.5, stay: float = 3.5, fade_out: float = 1.0) -> None:
+class titler(object):
+    def __init__(self, target: str = "@a", fade_in: float = 0.5, stay: float = 3.5, fade_out: float = 1.0, wait: bool = False, save_queue: bool = False) -> None:
         """Method __init__ will not send meassage to server.
         Fades in, stays, and fades out are in seconds."""
         self.target = target
         self.fade_in: int = round(fade_in * 20)
         self.stay: int = round(stay * 20)
         self.fade_out: int = round(fade_out * 20)
+        self.wait = wait
+
+        self.queue: list[Callable[[], str]] = []
+        self.save_queue = save_queue
     
-    def title(self, content: JsonText, target: str = "") -> str:
+    def _wait(self) -> None:
+        if self.wait: time.sleep(self.fade_in + self.stay + self.fade_out)
+    
+    def reset(self, target: str = "") -> str:
         if not target: target = self.target
-        command = f"title @a times {self.fade_in} {self.stay} {self.fade_out} title {content.__str__()}"
+        command = f"title {target} reset"
         return _call(command)
-    def subtitle(self, content: JsonText, target: str = "") -> str:
+    def clear(self, target: str = "") -> str:
         if not target: target = self.target
-        command = f"title @a times {self.fade_in} {self.stay} {self.fade_out} subtitle {content.__str__()}"
+        command = f"title {target} clear"
         return _call(command)
-    def actionbar(self, content: JsonText, target: str = "") -> str:
+    
+    def _add(self, command: str) -> None:
+        self.queue.append(lambda: _call(command))
+    
+    def title(self, content: JsonText | str, target: str = "") -> 'titler':
         if not target: target = self.target
-        command = f"title @a times {self.fade_in} {self.stay} {self.fade_out} actionbar {content.__str__()}"
-        return _call(command)
+        command = f"title {target} times {self.fade_in} {self.stay} {self.fade_out} title {content.__str__()}"
+        self._add(command)
+        return self
+    
+    def subtitle(self, content: JsonText | str, target: str = "") -> 'titler':
+        if not target: target = self.target
+        command = f"title {target} times {self.fade_in} {self.stay} {self.fade_out} subtitle {content.__str__()}"
+        self._add(command)
+        return self
+    
+    def actionbar(self, content: JsonText | str, target: str = "") -> 'titler':
+        if not target: target = self.target
+        command = f"title {target} times {self.fade_in} {self.stay} {self.fade_out} actionbar {content.__str__()}"
+        self._add(command)
+        return self
+    
+    def run(self, wait: bool | None = None) -> str:
+        response = ""
+        for command in self.queue:
+            response += command()
+        if not self.save_queue: self.queue = []
+        if wait is True or self.wait is True: self._wait()
+        return response
+        
 
 def playsound(sound: str,
               source: str = "master",
