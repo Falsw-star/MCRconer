@@ -1,13 +1,15 @@
 from main import *
 import time
 
-with Rcon("127.0.0.1", "FalswIsNotCute", 25575) as rcon:
-    say("Hello Minecraft")
-    tellraw(message=JsonText("Hello TellRaw!", color="gold"))
-    print(playsound("minecraft:entity.player.levelup", target="Falsw"))
-    vtlr = titler()
-    vtlr.title(JsonText("Welcome to", color="green", bold=True) + " " + JsonText("Minecraft", color="gold", bold=True))
-    vtlr.subtitle(JsonText("A Python library for RCON", color="aqua"))
-    vtlr.run()
-    vtlr.actionbar(JsonText("Little is cute!", color="red", bold=True, italic=True))
-    vtlr.run()
+with Rcon("127.0.0.1", "FalswIsNotCute", 25575):
+
+    pr = particler((0,80,0),default_delta=(0.1,1,0.1), default_count=10)
+    c = pr.get_canvas()
+    c.set_density(1)
+
+    c.get_pen(
+    ).line((-20, 0 ,-20), (20, 20, 20), name="flame", duration=1
+    ).line((20, 0, -20), (-20, 0, 20), name="flame"
+    ).throw()
+
+    c.show()
